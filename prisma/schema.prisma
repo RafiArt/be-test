@@ -10,4 +10,87 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Declare schemas here
+// User model for authentication
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  password  String
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations
+  uploadedFiles FileUpload[]
+  
+  @@map("users")
+}
+
+// File upload tracking
+model FileUpload {
+  id          Int               @id @default(autoincrement())
+  filename    String
+  originalName String
+  fileSize    Int
+  mimeType    String
+  filePath    String?
+  fileUrl     String?
+  status      FileUploadStatus  @default(PENDING)
+  errorMessage String?
+  processedAt DateTime?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  
+  // Relations
+  userId      Int
+  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  products    Product[]
+  sales       Sale[]
+  
+  @@map("file_uploads")
+}
+
+// Sample data models for Excel processing
+model Product {
+  id          Int        @id @default(autoincrement())
+  name        String
+  description String?
+  price       Decimal    @db.Decimal(10, 2)
+  category    String?
+  sku         String?    @unique
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  
+  // Relations
+  fileUploadId Int?
+  fileUpload   FileUpload? @relation(fields: [fileUploadId], references: [id], onDelete: SetNull)
+  sales        Sale[]
+  
+  @@map("products")
+}
+
+model Sale {
+  id          Int        @id @default(autoincrement())
+  productId   Int
+  quantity    Int
+  unitPrice   Decimal    @db.Decimal(10, 2)
+  totalPrice  Decimal    @db.Decimal(10, 2)
+  saleDate    DateTime
+  customerName String?
+  customerEmail String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  
+  // Relations
+  product      Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
+  fileUploadId Int?
+  fileUpload   FileUpload? @relation(fields: [fileUploadId], references: [id], onDelete: SetNull)
+  
+  @@map("sales")
+}
+
+enum FileUploadStatus {
+  PENDING
+  PROCESSING
+  SUCCESS
+  FAILED
+}
